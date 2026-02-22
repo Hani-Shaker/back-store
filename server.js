@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import ordersRouter from './routes/orders.js';
 import contactRouter from './routes/contact.js';
 import productsRouter from './routes/products.js';
+import uploadDriveRouter from './routes/upload-drive.js';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use(cors({
 
 app.use(express.json());
 
+app.use('/api/upload-drive', uploadDriveRouter);
 // Routes
 app.use('/api/orders', ordersRouter);
 app.use('/api/contact', contactRouter);
