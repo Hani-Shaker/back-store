@@ -7,6 +7,10 @@ const productSchema = new mongoose.Schema({
   image: String,
   category: String,
   stock: { type: Number, default: 0 },
+  colors: [{
+  type: String,
+  default: ''
+}],
 }, { timestamps: true });
 
 export default mongoose.model('Product', productSchema);    
