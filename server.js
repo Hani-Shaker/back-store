@@ -12,6 +12,12 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+app.use(cors({
+  origin: '*',  // السماح من أي مكان
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 // ✅ CORS - للتطوير استخدم * أو localhost
 app.use(cors({
   origin: [
