@@ -3,135 +3,86 @@ import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 
-import productsHandler from "./api/products.js";
-import ordersHandler from "./api/orders.js";
-import contactHandler from "./api/contact.js";
-import uploadDriveHandler from "./api/upload-drive.js";
-import adminVerifyHandler from "./api/admin-verify.js";
-
 dotenv.config();
 
 const app = express();
 
-// ✅ Middleware
-app.use(cors());
+// ✅ CORS محسّنة
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'https://front-store-ecru.vercel.app'
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // اسمح بـ كل مكان للـ development
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ Error Handler Wrapper
+// ✅ معالج الأخطاء
 const wrapHandler = (handler) => async (req, res) => {
   try {
     await handler(req, res);
   } catch (error) {
     console.error('❌ Error:', error.message);
     if (!res.headersSent) {
-      res.status(500).json({ message: error.message });
+      res.status(500).json({ 
+        message: error.message || 'Server error'
+      });
     }
   }
 };
 
-// ✅ Home Route
+// ✅ Routes
 app.get("/", (req, res) => {
-  res.json({ 
-    message: "🛍️ E-Commerce Backend Running!",
-    status: "✅ Online",
-    version: "1.0.0",
-    endpoints: {
-      products: {
-        getAll: "GET /api/products",
-        create: "POST /api/products",
-        update: "PUT /api/products/:id",
-        delete: "DELETE /api/products/:id"
-      },
-      orders: {
-        getAll: "GET /api/orders",
-        create: "POST /api/orders"
-      },
-      contact: {
-        send: "POST /api/contact"
-      },
-      uploads: "POST /api/upload-drive",
-      admin: "POST /api/admin/verify-password"
-    }
-  });
+  res.json({ message: "🛍️ E-Commerce Backend" });
 });
 
-// ✅ Health Check
 app.get("/api/health", (req, res) => {
-  res.json({ 
-    status: "✅ OK", 
-    timestamp: new Date().toISOString(),
-    database: mongoose.connection.readyState === 1 ? "🟢 Connected" : "🔴 Disconnected"
-  });
+  res.json({ status: "✅ OK" });
 });
 
-// ✅ API Routes
+import productsHandler from "./api/products.js";
+import ordersHandler from "./api/orders.js";
+import contactHandler from "./api/contact.js";
+import adminVerifyHandler from "./api/admin-verify.js";
+
 app.all("/api/products", wrapHandler(productsHandler));
 app.all("/api/orders", wrapHandler(ordersHandler));
 app.all("/api/contact", wrapHandler(contactHandler));
-app.all("/api/upload-drive", wrapHandler(uploadDriveHandler));
 app.post("/api/admin/verify-password", wrapHandler(adminVerifyHandler));
 
-// ✅ 404 Handler
 app.use((req, res) => {
-  res.status(404).json({ 
-    message: '❌ Route not found',
-    path: req.path,
-    method: req.method,
-    suggestion: 'Check /api/health or GET / for available endpoints'
-  });
+  res.status(404).json({ message: '❌ Route not found' });
 });
 
-// ✅ MongoDB Connection
+// ✅ MongoDB
 mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('✅ MongoDB Atlas Connected');
+  .connect(process.env.MONGODB_URI, {
+    connectTimeoutMS: 20000,
+    socketTimeoutMS: 20000,
+    serverSelectionTimeoutMS: 20000
   })
-  .catch((err) => {
-    console.error('❌ MongoDB Connection Error:', err.message);
+  .then(() => console.log('✅ MongoDB Connected'))
+  .catch(err => {
+    console.error('❌ MongoDB Error:', err.message);
     process.exit(1);
   });
 
-// ✅ Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`
-╔════════════════════════════════════════╗
-║   🚀 E-Commerce Backend Server 🚀      ║
-╚════════════════════════════════════════╝
-
-📍 Server: http://localhost:${PORT}
-
-📦 PRODUCTS:
-   GET    /api/products          - Get all products
-   POST   /api/products          - Create product
-   PUT    /api/products/:id      - Update product
-   DELETE /api/products/:id      - Delete product
-
-📋 ORDERS:
-   GET    /api/orders            - Get all orders
-   POST   /api/orders            - Create order
-
-💬 CONTACT:
-   POST   /api/contact           - Send message
-
-📤 UPLOADS:
-   POST   /api/upload-drive      - Upload to Google Drive
-
-🔐 ADMIN:
-   POST   /api/admin/verify-password - Verify admin password
-
-💚 HEALTH CHECK:
-   GET    /api/health            - Server health status
-
-🏠 HOME:
-   GET    /                       - API Documentation
-
-════════════════════════════════════════
-
-✅ Ready to accept requests!
-  `);
+  console.log(`🚀 Server on port ${PORT}`);
 });
-
-export default app;
