@@ -3,11 +3,11 @@ import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 
-import productsHandler from "./routes/products.js";
-import ordersHandler from "./routes/orders.js";
-import contactHandler from "./routes/contact.js";
-import uploadDriveHandler from "./routes/upload-drive.js";
-import adminVerifyHandler from "./routes/admin-verify.js";
+import productsHandler from "./api/products.js";
+import ordersHandler from "./api/orders.js";
+import contactHandler from "./api/contact.js";
+import uploadDriveHandler from "./api/upload-drive.js";
+import adminVerifyHandler from "./api/admin-verify.js";
 
 dotenv.config();
 
