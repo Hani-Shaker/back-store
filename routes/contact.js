@@ -1,25 +1,54 @@
-import express from 'express';
+
 import Contact from '../models/Contact.js';
-import { sendContactEmail } from '../middleware/mailer.js';
 
-const router = express.Router();
+const contactHandler = async (req, res) => {
+  const { method, body } = req;
 
-// POST /api/contact
-router.post('/', async (req, res) => {
   try {
-    const { name, email, message } = req.body;
-    if (!name?.trim() || !message?.trim()) {
-      return res.status(400).json({ message: 'يرجى ملء الحقول المطلوبة' });
+    if (method === 'POST') {
+      // ✅ POST /api/contact - إرسال رسالة تواصل
+      const { name, email, subject, message } = body;
+
+      if (!name || !email || !message) {
+        return res.status(400).json({ 
+          message: 'جميع الحقول مطلوبة' 
+        });
+      }
+
+      // التحقق من صيغة البريد الإلكتروني
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ 
+          message: 'البريد الإلكتروني غير صحيح' 
+        });
+      }
+
+      const contact = await Contact.create({
+        name: name.trim(),
+        email: email.trim(),
+        subject: subject || 'بدون عنوان',
+        message: message.trim(),
+        status: 'new'
+      });
+
+      return res.status(201).json({
+        message: 'تم استقبال رسالتك بنجاح ✅',
+        contact
+      });
     }
 
-    const contact = await Contact.create({ name, email, message });
-    sendContactEmail(contact).catch((err) => console.error('Email error:', err));
+    return res.status(405).json({ 
+      message: 'Method not allowed',
+      allowedMethods: ['POST']
+    });
 
-    res.status(201).json({ message: 'تم إرسال رسالتك بنجاح! سنتواصل معك قريباً' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'حدث خطأ، حاول مرة أخرى' });
+  } catch (error) {
+    console.error('❌ Contact handler error:', error);
+    return res.status(500).json({ 
+      message: 'خطأ في إرسال الرسالة',
+      error: error.message 
+    });
   }
-});
+};
 
-export default router;
+export default contactHandler;
