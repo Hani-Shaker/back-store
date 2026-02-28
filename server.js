@@ -40,6 +40,33 @@ app.use('/api/products', productsRouter);
 
 app.get('/api/health', (_, res) => res.json({ status: 'OK', time: new Date() }));
 
+// Verify Admin Password
+app.post('/api/admin/verify-password', (req, res) => {
+  try {
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ message: 'كلمة السر مطلوبة' });
+    }
+
+    const adminPassword = process.env.ADMIN_PASSWORD || '123456';
+
+    if (password === adminPassword) {
+      res.json({ 
+        message: 'كلمة السر صحيحة',
+        authenticated: true 
+      });
+    } else {
+      res.status(401).json({ 
+        message: 'كلمة السر خاطئة',
+        authenticated: false 
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'خطأ في التحقق' });
+  }
+});
+
 // MongoDB Connection
 mongoose
   .connect(process.env.MONGODB_URI)
