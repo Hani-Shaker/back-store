@@ -60,9 +60,9 @@ import ordersHandler from "./api/orders.js";
 import contactHandler from "./api/contact.js";
 import adminVerifyHandler from "./api/admin-verify.js";
 
-app.all("/api/products", wrapHandler(productsHandler));
-app.all("/api/orders", wrapHandler(ordersHandler));
-app.all("/api/contact", wrapHandler(contactHandler));
+app.all("/api/products*", wrapHandler(productsHandler));
+app.all("/api/orders*", wrapHandler(ordersHandler));
+app.all("/api/contact*", wrapHandler(contactHandler));
 app.post("/api/admin/verify-password", wrapHandler(adminVerifyHandler));
 
 app.use((req, res) => {

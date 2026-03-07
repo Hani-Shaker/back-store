@@ -1,23 +1,31 @@
-// routes/products.js
+// backend/api/products.js
 import Product from '../models/Product.js';
 
-const productsHandler = async (req, res) => {
-  const { method, query, body } = req;
+export default async (req, res) => {
+  const { method, url, body } = req;
+
+  // ✅ استخرج الـ ID من الـ URL
+  const pathParts = url.split('/api/products/');
+  const productId = pathParts[1] ? pathParts[1].split('?')[0] : null;
+
+  console.log('Method:', method, 'ProductID:', productId);
 
   try {
+    // GET - جلب المنتجات
     if (method === 'GET') {
-      // ✅ GET /api/products - جلب جميع المنتجات
+      if (productId) {
+        const product = await Product.findById(productId);
+        if (!product) return res.status(404).json({ message: 'غير موجود' });
+        return res.json(product);
+      }
       const products = await Product.find().sort({ createdAt: -1 });
       return res.json(products);
     }
 
+    // POST - إضافة منتج
     if (method === 'POST') {
-      // ✅ POST /api/products - إضافة منتج جديد
-      const { name, description, price, image, category, stock, colors } = body;
-
-      if (!name || !price) {
-        return res.status(400).json({ message: 'الاسم والسعر مطلوبان' });
-      }
+      const { name, price, description, image, category, stock, colors } = body;
+      if (!name || !price) return res.status(400).json({ message: 'الاسم والسعر مطلوبان' });
 
       const product = await Product.create({
         name: name.trim(),
@@ -30,71 +38,39 @@ const productsHandler = async (req, res) => {
           ? colors.filter(c => c && c.length > 0)
           : ['#000000']
       });
-
       return res.status(201).json(product);
     }
 
+    // PUT - تحديث منتج
     if (method === 'PUT') {
-      // ✅ PUT /api/products/:id - تحديث منتج
-      const { id } = query;
-      
-      if (!id) {
-        return res.status(400).json({ message: 'Product ID is required' });
-      }
+      if (!productId) return res.status(400).json({ message: 'ID مطلوب' });
 
-      const updateData = {};
-      if (body.name) updateData.name = body.name.trim();
-      if (body.description !== undefined) updateData.description = body.description;
-      if (body.price) updateData.price = parseFloat(body.price);
-      if (body.image) updateData.image = body.image;
-      if (body.category) updateData.category = body.category;
-      if (body.stock !== undefined) updateData.stock = parseInt(body.stock) || 0;
-      if (body.colors) {
-        updateData.colors = Array.isArray(body.colors) && body.colors.length > 0
-          ? body.colors.filter(c => c && c.length > 0)
-          : ['#000000'];
-      }
+      console.log('🔄 Updating:', productId);
 
-      const product = await Product.findByIdAndUpdate(id, updateData, { new: true });
+      const product = await Product.findByIdAndUpdate(productId, body, { new: true });
+      if (!product) return res.status(404).json({ message: 'المنتج غير موجود' });
 
-      if (!product) {
-        return res.status(404).json({ message: 'المنتج غير موجود' });
-      }
-
+      console.log('✅ Updated:', product.name);
       return res.json(product);
     }
 
+    // DELETE - حذف منتج
     if (method === 'DELETE') {
-      // ✅ DELETE /api/products/:id - حذف منتج
-      const { id } = query;
+      if (!productId) return res.status(400).json({ message: 'ID مطلوب' });
 
-      if (!id) {
-        return res.status(400).json({ message: 'Product ID is required' });
-      }
+      console.log('🗑️ Deleting:', productId);
 
-      const product = await Product.findByIdAndDelete(id);
+      const product = await Product.findByIdAndDelete(productId);
+      if (!product) return res.status(404).json({ message: 'المنتج غير موجود' });
 
-      if (!product) {
-        return res.status(404).json({ message: 'المنتج غير موجود' });
-      }
-
-      return res.json({ message: 'تم حذف المنتج بنجاح', product });
+      console.log('✅ Deleted:', product.name);
+      return res.json({ message: 'تم الحذف بنجاح' });
     }
 
-    // ❌ Method not allowed
-    return res.status(405).json({ 
-      message: 'Method not allowed',
-      method: method,
-      allowedMethods: ['GET', 'POST', 'PUT', 'DELETE']
-    });
+    return res.status(405).json({ message: 'Method not allowed' });
 
   } catch (error) {
-    console.error('❌ Products handler error:', error);
-    return res.status(500).json({ 
-      message: 'خطأ في معالجة الطلب',
-      error: error.message 
-    });
+    console.error('❌ Error:', error.message);
+    return res.status(500).json({ message: error.message });
   }
 };
-
-export default productsHandler;
