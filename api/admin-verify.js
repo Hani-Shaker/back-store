@@ -1,4 +1,3 @@
-// routes/admin-verify.js
 const adminVerifyHandler = async (req, res) => {
   try {
     const { password } = req.body;
