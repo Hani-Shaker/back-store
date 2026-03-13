@@ -29,7 +29,7 @@ export const sendOrderEmail = async (order) => {
   const html = `
     <div dir="rtl" style="font-family:Cairo,Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:12px;overflow:hidden">
       <div style="background:linear-gradient(135deg,#1a7a6e,#0f4d45);padding:24px;color:#fff;text-align:center">
-        <h2 style="margin:0;font-size:22px">✨ طلب جديد - أناقة ستور</h2>
+        <h2 style="margin:0;font-size:22px">✨ طلب جديد - Lola Store</h2>
       </div>
       <div style="padding:24px">
         <h3 style="color:#1a7a6e;border-bottom:2px solid #eee;padding-bottom:8px">📦 بيانات الطلب</h3>
@@ -67,12 +67,12 @@ export const sendOrderEmail = async (order) => {
         </table>
       </div>
       <div style="background:#f5f5f5;padding:16px;text-align:center;color:#999;font-size:12px">
-        أناقة ستور © ${new Date().getFullYear()}
+        Lola Store © ${new Date().getFullYear()}
       </div>
     </div>`;
 
   await transporter.sendMail({
-    from: `"أناقة ستور 🛍️" <${process.env.EMAIL_USER}>`,
+    from: `"Lola Store 🛍️" <${process.env.EMAIL_USER}>`,
     to: process.env.OWNER_EMAIL,
     subject: `🛒 طلب جديد من ${order.customer.name} - ${order.grandTotal} ج.م`,
     html,
@@ -97,7 +97,7 @@ export const sendContactEmail = async (contact) => {
     </div>`;
 
   await transporter.sendMail({
-    from: `"أناقة ستور 📬" <${process.env.EMAIL_USER}>`,
+    from: `"Lola Store 📬" <${process.env.EMAIL_USER}>`,
     to: process.env.OWNER_EMAIL,
     subject: `📩 رسالة جديدة من ${contact.name}`,
     html,

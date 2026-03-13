@@ -9,7 +9,7 @@ const adminVerifyHandler = async (req, res) => {
       });
     }
 
-    const adminPassword = process.env.ADMIN_PASSWORD || '123456';
+    const adminPassword = process.env.ADMIN_PASSWORD;
 
     if (password === adminPassword) {
       return res.status(200).json({ 

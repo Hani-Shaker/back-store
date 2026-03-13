@@ -12,7 +12,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'http://127.0.0.1:5173',
-  'https://front-store-ecru.vercel.app/'
+  'https://front-store-ecru.vercel.app'
 ];
 
 app.use(cors({
