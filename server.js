@@ -1,9 +1,9 @@
-import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
-import mongoose from "mongoose";
-
 dotenv.config();
+import express from "express";
+import mongoose from "mongoose";
+import cors from "cors";
+
 
 const app = express();
 
@@ -12,15 +12,26 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'http://127.0.0.1:5173',
-  'https://front-store-ecru.vercel.app'
+  'https://front-store-ecru.vercel.app'  // ✅ بدون الـ slash
 ];
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // اسمح بـ requests بدون origin (مثل mobile apps)
+    if (!origin) {
       callback(null, true);
-    } else {
-      callback(null, true); // اسمح بـ كل مكان للـ development
+    }
+    // اسمح بـ allowed origins
+    else if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    }
+    // في الإنتاج، reject غير المسموح
+    else if (process.env.NODE_ENV === 'production') {
+      callback(new Error('Not allowed by CORS'));
+    }
+    // في التطوير، اسمح بكل شيء
+    else {
+      callback(null, true);
     }
   },
   credentials: true,
