@@ -112,8 +112,8 @@ const ordersHandler = async (req, res) => {
       customer,
       items,
       totalPrice,
-      deliveryFee: deliveryFee || 50,
-      total: totalPrice + (deliveryFee || 50),
+      deliveryFee: deliveryFee || 30,
+      total: totalPrice + (deliveryFee || 30),
       status: 'pending',
       ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown',
       userAgent: req.headers['user-agent'] || 'Unknown'
