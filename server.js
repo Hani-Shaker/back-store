@@ -8,6 +8,8 @@ import productsHandler from './api/products.js';
 import ordersHandler from './api/orders.js';
 import contactHandler from './api/contact.js';
 import adminVerifyHandler from './api/admin-verify.js';
+import settingsHandler from './api/settings.js';
+import statsHandler from './api/stats.js';
 
 const app = express();
 app.set('trust proxy', 1); // للحصول على IP الحقيقي خلف Vercel
@@ -72,6 +74,8 @@ const wrapHandler = (handler) => async (req, res) => {
 app.all(/^\/api\/products(\/.*)?$/, withDB, wrapHandler(productsHandler));
 app.all(/^\/api\/orders(\/.*)?$/, withDB, wrapHandler(ordersHandler));
 app.all(/^\/api\/contact(\/.*)?$/, withDB, wrapHandler(contactHandler));
+app.all('/api/settings', withDB, wrapHandler(settingsHandler));
+app.all('/api/stats', withDB, wrapHandler(statsHandler));
 app.post('/api/admin/verify-password', wrapHandler(adminVerifyHandler));
 
 app.use((req, res) => {
