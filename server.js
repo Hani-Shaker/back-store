@@ -1,99 +1,104 @@
-import dotenv from "dotenv";
+import dotenv from 'dotenv';
 dotenv.config();
-import express from "express";
-import mongoose from "mongoose";
-import cors from "cors";
+import express from 'express';
+import cors from 'cors';
 
+import connectDB from './config/db.js';
+import productsHandler from './api/products.js';
+import ordersHandler from './api/orders.js';
+import contactHandler from './api/contact.js';
+import adminVerifyHandler from './api/admin-verify.js';
 
 const app = express();
+app.set('trust proxy', 1); // للحصول على IP الحقيقي خلف Vercel
 
-// ✅ CORS محسّنة
+// ✅ CORS
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'http://127.0.0.1:5173',
-  'https://front-store-ecru.vercel.app'  // ✅ بدون الـ slash
+  'https://front-store-ecru.vercel.app'
 ];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // اسمح بـ requests بدون origin (مثل mobile apps)
-    if (!origin) {
-      callback(null, true);
-    }
-    // اسمح بـ allowed origins
-    else if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    }
-    // في الإنتاج، reject غير المسموح
-    else if (process.env.NODE_ENV === 'production') {
-      callback(new Error('Not allowed by CORS'));
-    }
-    // في التطوير، اسمح بكل شيء
-    else {
-      callback(null, true);
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // mobile apps / curl
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      if (process.env.NODE_ENV === 'production') return callback(null, false);
+      return callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 200
+  })
+);
 
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ معالج الأخطاء
+// ✅ Routes اللي مش محتاجة DB
+app.get('/', (req, res) => {
+  res.json({ message: '🛍️ E-Commerce Backend' });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: '✅ OK' });
+});
+
+// ✅ اتصال MongoDB قبل أي route بيستخدم الداتابيز (مناسب لـ Vercel serverless)
+const withDB = async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error('❌ MongoDB Error:', error.message);
+    res.status(503).json({ message: 'تعذر الاتصال بقاعدة البيانات' });
+  }
+};
+
 const wrapHandler = (handler) => async (req, res) => {
   try {
     await handler(req, res);
   } catch (error) {
-    console.error('❌ Error:', error.message);
+    console.error('❌ Error:', error);
     if (!res.headersSent) {
-      res.status(500).json({ 
-        message: error.message || 'Server error'
-      });
+      res.status(500).json({ message: 'حدث خطأ في السيرفر' });
     }
   }
 };
 
-// ✅ Routes
-app.get("/", (req, res) => {
-  res.json({ message: "🛍️ E-Commerce Backend" });
-});
-
-app.get("/api/health", (req, res) => {
-  res.json({ status: "✅ OK" });
-});
-
-import productsHandler from "./api/products.js";
-import ordersHandler from "./api/orders.js";
-import contactHandler from "./api/contact.js";
-import adminVerifyHandler from "./api/admin-verify.js";
-
-app.all("/api/products*", wrapHandler(productsHandler));
-app.all("/api/orders*", wrapHandler(ordersHandler));
-app.all("/api/contact*", wrapHandler(contactHandler));
-app.post("/api/admin/verify-password", wrapHandler(adminVerifyHandler));
+app.all(/^\/api\/products(\/.*)?$/, withDB, wrapHandler(productsHandler));
+app.all(/^\/api\/orders(\/.*)?$/, withDB, wrapHandler(ordersHandler));
+app.all(/^\/api\/contact(\/.*)?$/, withDB, wrapHandler(contactHandler));
+app.post('/api/admin/verify-password', wrapHandler(adminVerifyHandler));
 
 app.use((req, res) => {
   res.status(404).json({ message: '❌ Route not found' });
 });
 
-// ✅ MongoDB
-mongoose
-  .connect(process.env.MONGODB_URI, {
-    connectTimeoutMS: 20000,
-    socketTimeoutMS: 20000,
-    serverSelectionTimeoutMS: 20000
-  })
-  .then(() => console.log('✅ MongoDB Connected'))
-  .catch(err => {
-    console.error('❌ MongoDB Error:', err.message);
-    process.exit(1);
+// ✅ معالج أخطاء عام (JSON غير صالح، إلخ)
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  const status = err.status || err.statusCode || 500;
+  if (status >= 500) console.error('❌ Error:', err);
+  res.status(status).json({
+    message: status >= 500 ? 'حدث خطأ في السيرفر' : 'طلب غير صالح'
   });
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server on port ${PORT}`);
 });
+
+// على Vercel بيتم عمل export للـ app، ومحليًا بنعمل listen
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 5000;
+  connectDB()
+    .then(() => {
+      app.listen(PORT, () => console.log(`🚀 Server on port ${PORT}`));
+    })
+    .catch((err) => {
+      console.error('❌ MongoDB Error:', err.message);
+      process.exit(1);
+    });
+}
+
+export default app;

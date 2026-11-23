@@ -7,7 +7,7 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: [true, 'اسم المنتج مطلوب'],
       trim: true,
-      minlength: [2, 'الاسم يجب أن يكون أطول من حرف واحد'],
+      minlength: [2, 'الاسم يجب ألا يقل عن حرفين'],
       maxlength: [100, 'الاسم يجب أن لا يتجاوز 100 حرف']
     },
 
@@ -35,7 +35,7 @@ const productSchema = new mongoose.Schema(
     category: {
       type: String,
       default: 'عام',
-      enum: ['إلكترونيات', 'ملابس', 'إكسسوارات', 'أخرى', 'عام'  , "ميكب" , "ادوات منزلية"]
+      enum: ['إلكترونيات', 'ملابس', 'إكسسوارات', 'أخرى', 'عام', 'ميكب', 'ادوات منزلية']
     },
 
     // الكمية المتاحة

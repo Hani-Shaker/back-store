@@ -1,76 +1,121 @@
-// backend/api/products.js
+import mongoose from 'mongoose';
 import Product from '../models/Product.js';
+import { requireAdmin } from '../middleware/auth.js';
 
+// الحقول المسموح بتعديلها (منع mass assignment)
+const EDITABLE = [
+  'name', 'description', 'price', 'image', 'category',
+  'stock', 'colors', 'originalPrice', 'badge'
+];
+
+const pick = (body) => {
+  const out = {};
+  for (const key of EDITABLE) {
+    if (body[key] !== undefined) out[key] = body[key];
+  }
+  if (out.name !== undefined) out.name = String(out.name).trim();
+  if (out.price !== undefined) out.price = parseFloat(out.price);
+  if (out.stock !== undefined) out.stock = parseInt(out.stock, 10) || 0;
+  if (out.originalPrice !== undefined && out.originalPrice !== null && out.originalPrice !== '') {
+    out.originalPrice = parseFloat(out.originalPrice);
+  } else if (out.originalPrice === '') {
+    out.originalPrice = null;
+  }
+  if (out.badge === '') out.badge = null;
+  if (out.colors !== undefined) {
+    out.colors = Array.isArray(out.colors) ? out.colors.filter((c) => c && c.length > 0) : [];
+  }
+  return out;
+};
+
+const handleError = (res, error) => {
+  if (error.name === 'ValidationError') {
+    const message = Object.values(error.errors).map((e) => e.message).join('، ');
+    return res.status(400).json({ message });
+  }
+  if (error.name === 'CastError') {
+    return res.status(400).json({ message: 'قيمة غير صالحة' });
+  }
+  console.error('Products API Error:', error);
+  return res.status(500).json({ message: 'حدث خطأ في السيرفر' });
+};
+
+// CORS بيتعمل في server.js
 export default async (req, res) => {
-  const { method, url, body } = req;
+  const { method } = req;
 
-  // ✅ استخرج الـ ID من الـ URL
-  const pathParts = url.split('/api/products/');
-  const productId = pathParts[1] ? pathParts[1].split('?')[0] : null;
+  if (method === 'OPTIONS') {
+    return res.status(204).end();
+  }
 
-  console.log('Method:', method, 'ProductID:', productId);
+  const pathname = new URL(req.url, 'http://localhost').pathname;
+  const match = pathname.match(/\/api\/products\/?([^/]*)$/);
+  const productId = match?.[1] || null;
+
+  if (productId && !mongoose.isValidObjectId(productId)) {
+    return res.status(400).json({ message: 'ID غير صالح' });
+  }
+
+  // أي عملية كتابة محتاجة تسجيل دخول الأدمن
+  if (['POST', 'PUT', 'DELETE'].includes(method)) {
+    let denied = true;
+    requireAdmin(req, res, () => { denied = false; });
+    if (denied) return; // الـ middleware رد بالفعل 401
+  }
 
   try {
-    // GET - جلب المنتجات
     if (method === 'GET') {
       if (productId) {
         const product = await Product.findById(productId);
-        if (!product) return res.status(404).json({ message: 'غير موجود' });
-        return res.json(product);
+        if (!product) return res.status(404).json({ message: 'المنتج غير موجود' });
+        return res.status(200).json(product);
       }
       const products = await Product.find().sort({ createdAt: -1 });
-      return res.json(products);
+      return res.status(200).json(products);
     }
 
-    // POST - إضافة منتج
     if (method === 'POST') {
-      const { name, price, description, image, category, stock, colors } = body;
-      if (!name || !price) return res.status(400).json({ message: 'الاسم والسعر مطلوبان' });
+      const data = pick(req.body || {});
+
+      if (!data.name || data.price === undefined || Number.isNaN(data.price)) {
+        return res.status(400).json({ message: 'الاسم والسعر مطلوبان' });
+      }
 
       const product = await Product.create({
-        name: name.trim(),
-        description: description || '',
-        price: parseFloat(price),
-        image: image || '',
-        category: category || 'عام',
-        stock: parseInt(stock) || 0,
-        colors: Array.isArray(colors) && colors.length > 0 
-          ? colors.filter(c => c && c.length > 0)
-          : ['#000000']
+        ...data,
+        description: data.description || '',
+        image: data.image || '',
+        category: data.category || 'عام',
+        stock: data.stock || 0,
+        colors: data.colors && data.colors.length > 0 ? data.colors : ['#000000']
       });
+
       return res.status(201).json(product);
     }
 
-    // PUT - تحديث منتج
     if (method === 'PUT') {
       if (!productId) return res.status(400).json({ message: 'ID مطلوب' });
 
-      console.log('🔄 Updating:', productId);
+      const product = await Product.findByIdAndUpdate(productId, pick(req.body || {}), {
+        new: true,
+        runValidators: true
+      });
 
-      const product = await Product.findByIdAndUpdate(productId, body, { new: true });
       if (!product) return res.status(404).json({ message: 'المنتج غير موجود' });
-
-      console.log('✅ Updated:', product.name);
-      return res.json(product);
+      return res.status(200).json(product);
     }
 
-    // DELETE - حذف منتج
     if (method === 'DELETE') {
       if (!productId) return res.status(400).json({ message: 'ID مطلوب' });
-
-      console.log('🗑️ Deleting:', productId);
 
       const product = await Product.findByIdAndDelete(productId);
       if (!product) return res.status(404).json({ message: 'المنتج غير موجود' });
 
-      console.log('✅ Deleted:', product.name);
-      return res.json({ message: 'تم الحذف بنجاح' });
+      return res.status(200).json({ message: 'تم الحذف بنجاح' });
     }
 
     return res.status(405).json({ message: 'Method not allowed' });
-
   } catch (error) {
-    console.error('❌ Error:', error.message);
-    return res.status(500).json({ message: error.message });
+    return handleError(res, error);
   }
 };
