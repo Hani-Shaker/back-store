@@ -2,8 +2,21 @@ import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import { sendOrderEmail } from '../middleware/mailer.js';
+import { requireAdmin } from '../middleware/auth.js';
+import { getSettings } from './settings.js';
 
-const DEFAULT_DELIVERY_FEE = 50; // نفس قيمة Order model
+const STATUSES = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
+
+const adminOnly = (req, res) => {
+  let denied = true;
+  requireAdmin(req, res, () => { denied = false; });
+  return !denied;
+};
+
+const getId = (req) => {
+  const m = new URL(req.url, 'http://localhost').pathname.match(/\/api\/orders\/?([^/]*)$/);
+  return m?.[1] || null;
+};
 
 const ordersHandler = async (req, res) => {
   const { method } = req;
@@ -12,12 +25,59 @@ const ordersHandler = async (req, res) => {
     return res.status(200).end();
   }
 
+  const id = getId(req);
+  if (id && !mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ message: 'ID غير صالح' });
+  }
+
+  // ===== عمليات الأدمن =====
+  if (method === 'GET') {
+    if (!adminOnly(req, res)) return;
+    if (id) {
+      const order = await Order.findById(id);
+      return order ? res.json(order) : res.status(404).json({ message: 'الطلب غير موجود' });
+    }
+    const filter = STATUSES.includes(req.query.status) ? { status: req.query.status } : {};
+    return res.json(await Order.find(filter).sort({ createdAt: -1 }).limit(500));
+  }
+
+  if (method === 'PATCH' || method === 'PUT') {
+    if (!adminOnly(req, res)) return;
+    if (!id) return res.status(400).json({ message: 'ID مطلوب' });
+    const b = req.body || {};
+    const update = {};
+    if (b.status !== undefined) {
+      if (!STATUSES.includes(b.status)) return res.status(400).json({ message: 'حالة غير صالحة' });
+      update.status = b.status;
+    }
+    if (b.adminNote !== undefined) update.adminNote = String(b.adminNote);
+    if (b.deliveryFee !== undefined && Number(b.deliveryFee) >= 0) update.deliveryFee = Number(b.deliveryFee);
+    if (b.customer && typeof b.customer === 'object') {
+      for (const f of ['name', 'phone', 'email', 'address', 'city', 'notes']) {
+        if (b.customer[f] !== undefined) update[`customer.${f}`] = String(b.customer[f]);
+      }
+    }
+    const order = await Order.findById(id);
+    if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
+    order.set(update);
+    if (update.deliveryFee !== undefined) order.total = order.totalPrice + order.deliveryFee;
+    await order.save();
+    return res.json(order);
+  }
+
+  if (method === 'DELETE') {
+    if (!adminOnly(req, res)) return;
+    if (!id) return res.status(400).json({ message: 'ID مطلوب' });
+    const order = await Order.findByIdAndDelete(id);
+    return order ? res.json({ message: 'تم حذف الطلب' }) : res.status(404).json({ message: 'الطلب غير موجود' });
+  }
+
   if (method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
-    const { customer, items, deliveryFee } = req.body || {};
+    const { customer, items } = req.body || {};
 
     if (!customer || !customer.name || !customer.phone) {
       return res.status(400).json({
@@ -72,9 +132,12 @@ const ordersHandler = async (req, res) => {
     }
 
     const totalPrice = cleanItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-    const fee = Number.isFinite(Number(deliveryFee)) && Number(deliveryFee) >= 0
-      ? Number(deliveryFee)
-      : DEFAULT_DELIVERY_FEE;
+    // رسوم التوصيل من إعدادات المتجر (مش من العميل)
+    const settings = await getSettings();
+    const fee =
+      settings.freeShippingThreshold > 0 && totalPrice >= settings.freeShippingThreshold
+        ? 0
+        : settings.deliveryFee;
 
     const order = await Order.create({
       customer: {
