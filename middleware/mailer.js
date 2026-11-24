@@ -28,7 +28,7 @@ export const sendOrderEmail = async (order) => {
     .map(
       (item) => `
       <tr style="border-bottom:1px solid #eee">
-        <td style="padding:8px">${esc(item.name)}</td>
+        <td style="padding:8px">${esc(item.name)}${item.selectedImage && /^https?:\/\//.test(item.selectedImage) ? `<br><a href="${esc(item.selectedImage)}"><img src="${esc(item.selectedImage)}" width="64" height="64" style="border-radius:8px;object-fit:cover;margin-top:4px" alt=""></a><br><small style="color:#666">الصورة المختارة${item.selectedImageIndex ? ` رقم ${esc(item.selectedImageIndex)}` : ''}</small>` : ''}</td>
         <td style="padding:8px;text-align:center">${esc(item.quantity)}</td>
         <td style="padding:8px;text-align:center">
           ${item.selectedColor ? `<span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${safeColor(item.selectedColor)};border:1px solid #ccc;vertical-align:middle"></span>` : '—'}

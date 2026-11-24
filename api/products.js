@@ -5,7 +5,7 @@ import { requireAdmin } from '../middleware/auth.js';
 // الحقول المسموح بتعديلها (منع mass assignment)
 const EDITABLE = [
   'name', 'description', 'price', 'image', 'category',
-  'stock', 'colors', 'originalPrice', 'badge', 'images', 'variants'
+  'stock', 'colors', 'originalPrice', 'badge', 'images', 'variants', 'pickImage'
 ];
 
 const cleanUrls = (arr) =>
@@ -28,6 +28,7 @@ const pick = (body) => {
     out.originalPrice = null;
   }
   if (out.badge === '') out.badge = null;
+  if (out.pickImage !== undefined) out.pickImage = out.pickImage === true || out.pickImage === 'true';
   if (out.images !== undefined) out.images = cleanUrls(out.images);
   if (out.variants !== undefined) {
     out.variants = (Array.isArray(out.variants) ? out.variants : [])

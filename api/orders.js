@@ -107,6 +107,8 @@ const ordersHandler = async (req, res) => {
         quantity,
         selectedColor: item.selectedColor ? String(item.selectedColor) : undefined,
         image: item.image ? String(item.image) : undefined,
+        selectedImage: item.selectedImage ? String(item.selectedImage).slice(0, 500) : undefined,
+        selectedImageIndex: Number.isInteger(Number(item.selectedImageIndex)) && Number(item.selectedImageIndex) > 0 ? Number(item.selectedImageIndex) : undefined,
         category: item.category ? String(item.category) : undefined
       });
     }

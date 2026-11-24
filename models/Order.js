@@ -16,6 +16,8 @@ const orderSchema = new mongoose.Schema({
     quantity: Number,
     selectedColor: String,
     image: String,
+    selectedImage: String,       // الصورة اللي العميل اختارها
+    selectedImageIndex: Number,  // ترتيبها (1 = الأولى)
     category: String
   }],
   totalPrice: Number,

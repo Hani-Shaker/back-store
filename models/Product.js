@@ -38,6 +38,9 @@ const productSchema = new mongoose.Schema(
       validate: [(v) => v.length <= 10, 'الحد الأقصى 10 صور']
     },
 
+    // لو true: العميل يختار الصورة (التصميم) اللي عايزها من الصور
+    pickImage: { type: Boolean, default: false },
+
     // متغيرات الألوان: كل لون له صوره الخاصة
     variants: {
       type: [
