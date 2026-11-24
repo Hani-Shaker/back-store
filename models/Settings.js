@@ -4,10 +4,10 @@ import mongoose from 'mongoose';
 const settingsSchema = new mongoose.Schema(
   {
     key: { type: String, default: 'main', unique: true },
-    storeName: { type: String, default: 'Mero Store', trim: true, maxlength: 60 },
+    storeName: { type: String, default: 'Lola Store', trim: true, maxlength: 60 },
     tagline: { type: String, default: 'أزياء وإكسسوارات بأحدث الصيحات', trim: true, maxlength: 160 },
-    phone: { type: String, default: '01036463602', trim: true },
-    whatsapp: { type: String, default: '201036463602', trim: true },
+    phone: { type: String, default: '01026385348', trim: true },
+    whatsapp: { type: String, default: '201026385348', trim: true },
     email: { type: String, default: 'lolostore112@gmail.com', trim: true },
     address: { type: String, default: 'مصر - الفيوم', trim: true },
     instagram: { type: String, default: '', trim: true },

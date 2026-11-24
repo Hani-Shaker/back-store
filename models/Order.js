@@ -23,9 +23,10 @@ const orderSchema = new mongoose.Schema({
   total: Number,
   status: { 
     type: String, 
-    enum: ['pending', 'confirmed', 'shipped', 'delivered'],
+    enum: ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'],
     default: 'pending'
   },
+  adminNote: { type: String, default: '' },
   ipAddress: { type: String, default: 'Unknown' },
   userAgent: { type: String, default: 'Unknown' }
 }, { timestamps: true });

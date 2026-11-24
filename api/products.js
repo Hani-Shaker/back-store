@@ -5,8 +5,14 @@ import { requireAdmin } from '../middleware/auth.js';
 // الحقول المسموح بتعديلها (منع mass assignment)
 const EDITABLE = [
   'name', 'description', 'price', 'image', 'category',
-  'stock', 'colors', 'originalPrice', 'badge'
+  'stock', 'colors', 'originalPrice', 'badge', 'images', 'variants'
 ];
+
+const cleanUrls = (arr) =>
+  (Array.isArray(arr) ? arr : [])
+    .map((u) => String(u || '').trim())
+    .filter(Boolean)
+    .slice(0, 10);
 
 const pick = (body) => {
   const out = {};
@@ -22,8 +28,22 @@ const pick = (body) => {
     out.originalPrice = null;
   }
   if (out.badge === '') out.badge = null;
-  if (out.colors !== undefined) {
+  if (out.images !== undefined) out.images = cleanUrls(out.images);
+  if (out.variants !== undefined) {
+    out.variants = (Array.isArray(out.variants) ? out.variants : [])
+      .filter((v) => v && v.color)
+      .slice(0, 12)
+      .map((v) => ({ color: String(v.color), images: cleanUrls(v.images) }));
+    // الألوان تتحسب من المتغيرات (المنتج ممكن يبقى من غير ألوان)
+    out.colors = out.variants.map((v) => v.color);
+  } else if (out.colors !== undefined) {
     out.colors = Array.isArray(out.colors) ? out.colors.filter((c) => c && c.length > 0) : [];
+  }
+  // الصورة الرئيسية = أول صورة متاحة (للتوافق مع باقي الموقع)
+  if (out.images !== undefined || out.variants !== undefined) {
+    const first = out.images?.[0] || out.variants?.find((v) => v.images.length)?.images[0];
+    if (first) out.image = first;
+    else if (out.image === undefined) out.image = '';
   }
   return out;
 };
@@ -87,7 +107,7 @@ export default async (req, res) => {
         image: data.image || '',
         category: data.category || 'عام',
         stock: data.stock || 0,
-        colors: data.colors && data.colors.length > 0 ? data.colors : ['#000000']
+        colors: data.colors || []
       });
 
       return res.status(201).json(product);

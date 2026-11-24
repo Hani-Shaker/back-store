@@ -31,6 +31,28 @@ const productSchema = new mongoose.Schema(
       default: ''
     },
 
+    // صور المنتج الأساسية (تُعرض لو مفيش ألوان، أو لو اللون ملوش صور)
+    images: {
+      type: [String],
+      default: [],
+      validate: [(v) => v.length <= 10, 'الحد الأقصى 10 صور']
+    },
+
+    // متغيرات الألوان: كل لون له صوره الخاصة
+    variants: {
+      type: [
+        new mongoose.Schema(
+          {
+            color: { type: String, match: [/^#[0-9A-F]{6}$/i, 'لون غير صالح'], required: true },
+            images: { type: [String], default: [] }
+          },
+          { _id: false }
+        )
+      ],
+      default: [],
+      validate: [(v) => v.length <= 12, 'الحد الأقصى 12 لون']
+    },
+
     // فئة المنتج
     category: {
       type: String,
@@ -74,13 +96,5 @@ const productSchema = new mongoose.Schema(
     timestamps: true // createdAt و updatedAt تلقائياً
   }
 );
-
-// تعيين قيمة افتراضية للألوان عند الإنشاء
-productSchema.pre('save', function(next) {
-  if (!this.colors || this.colors.length === 0) {
-    this.colors = ['#000000'];
-  }
-  next();
-});
 
 export default mongoose.model('Product', productSchema);

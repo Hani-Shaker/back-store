@@ -31,7 +31,7 @@ export const sendOrderEmail = async (order) => {
         <td style="padding:8px">${esc(item.name)}</td>
         <td style="padding:8px;text-align:center">${esc(item.quantity)}</td>
         <td style="padding:8px;text-align:center">
-          <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${safeColor(item.selectedColor)};border:1px solid #ccc;vertical-align:middle"></span>
+          ${item.selectedColor ? `<span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${safeColor(item.selectedColor)};border:1px solid #ccc;vertical-align:middle"></span>` : '—'}
         </td>
         <td style="padding:8px;text-align:right">${esc(item.price)} ج.م</td>
         <td style="padding:8px;text-align:right">${esc(item.price * item.quantity)} ج.م</td>
